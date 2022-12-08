@@ -5,7 +5,7 @@ date: "12/8/2022"
 output: html_document
 ---
 
-Webscraping par navigateur automaitisé : récupération des articles du journal
+Webscraping par navigateur automatisé : récupération des articles du journal
 Le Monde contenant les mots clés "Aéronautique.s" ; "Aérospatial.e.s" ; 
 "Energie.s" durant les mois d'octobre et novembre 2022.
 
