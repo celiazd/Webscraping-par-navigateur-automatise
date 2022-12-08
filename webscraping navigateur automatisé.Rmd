@@ -1,0 +1,124 @@
+---
+title: "Webscraping navigateur automatisé"
+author: "Célia Zaidi"
+date: "12/8/2022"
+output: html_document
+---
+
+Webscraping par navigateur automaitisé : récupération des articles du journal
+Le Monde contenant les mots clés "Aéronautique.s" ; "Aérospatial.e.s" ; 
+"Energie.s" durant les mois d'octobre et novembre 2022.
+
+Chargement des packages nécessaires.
+
+
+```{r}
+library(RSelenium)
+library(tidyverse)
+library(rvest)
+library(readr)
+```
+
+
+Ouverture du navigateur automatisé + indication de l'url
+C'est à ce moment précis, que nous spécifions les mots clés et la période que 
+nous souhaitons, dans la page ouverte par le logiciel. 
+
+```{r}
+remDr <- rsDriver(browser = "firefox", verbose =TRUE, check = TRUE, port = 4568L)$client
+
+remDr$close()
+remDr$open()
+url <- "https://nouveau-europresse-com.ressources-electroniques.univ-lille.fr/Search/ResultMobile"
+remDr$navigate(url)
+```
+
+
+Déclaration du tableau dans lequel nous souhaitons stocker les données
+aspirées
+
+```{r}
+tableau_articles<- tibble(TX_JOURNAL = character(),
+                             TX_TITRE = character(),
+                             TX_DATE = character(),
+                             TX_EXTRAIT = character(),
+)
+```
+
+
+En effet, il est nécessaire de webscraper par navigateur automatisé lorsque 
+la cyber sécurité d'un site web est renforcée. 
+Cela nous permet de ne pas être identifiable.
+
+Cependant, bien que nous passons par un navigateur automatisé, le site en 
+question peut tout de même détecter nos actions et nous couper brutalement 
+l'accès à la page web. 
+
+Ainsi, Nous anticipons cela en récupérant intégralement le code source de la 
+page web via la commande suivante ci-dessous. Après cela, bien que la page soit 
+fermée, nous avons encore accès aux données. 
+
+```{r}
+page_jeu <- read_html(remDr$getPageSource()[[1]])
+```
+
+
+Ensuite, nous listons les fichiers disponibles en spécifiant les balises HTML
+des éléments que nous souhaitons récuperer.
+
+Création de la boucle de récupération en sous catégories d'éléments par article.
+
+```{r}
+liste_articles <- html_elements(page_jeu,xpath = "//div[@class='docListItem msDocItem']")
+
+for (k in 1:length(liste_articles)){
+  
+  # Donner l'id de l'extraction en cours
+  print(k)
+  
+  # On sélectionne l'actu
+  article <- liste_articles[[k]]
+  
+  
+  # Récupérer les infos de l'actu
+  
+  journal <- html_text(html_elements(article, xpath = ".//span[@class = 'source-name']"))
+  
+  titre <- html_text(html_elements(article, xpath =".//div/a[@class = 'docList-links']"))
+  
+  date <- html_text(html_elements(article, xpath = ".//span[@class = 'details']"))[1]
+  
+  extrait <- html_text(html_elements(article, xpath = ".//div[@class = 'kwicResult clearfix']"))
+  
+  # Insertion d'une nouvelle ligne dans le tableau
+  tableau_articles <- tableau_articles %>% 
+    add_row( TX_JOURNAL = journal,
+             TX_TITRE = titre,
+             TX_DATE = date,
+             TX_EXTRAIT = extrait)
+  
+}
+```
+
+Ici, sachant que les données des dates et des extraits que nous avons récupéré
+n'étaient pas propres, nous les nettoyons via les commandes suivantes : 
+
+```{r}
+tableau_articles$TX_DATEEXACTE <- substr(tableau_articles$TX_DATE,2,11)
+
+tableau_articles$TX_EXTRAIT <- str_remove(tableau_articles$TX_EXTRAIT,"^.*mots")
+
+```
+
+Pour terminer, nous exportons les données aspirées 
+
+```{r}
+# Choix du répertoire de travail
+setwd("~/Desktop")
+
+# Exporter un tableau en CSV
+write.csv2(tableau_articles,file="tableau_articles.csv")
+```
+
+```
+
